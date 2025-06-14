@@ -10,6 +10,9 @@ import os
 from django.conf import settings
 import traceback
 from io import BytesIO
+from huggingface_hub import hf_hub_download
+import tensorflow as tf
+import os
 
 class ModelLoader:
     model_freshness = None
@@ -18,17 +21,21 @@ class ModelLoader:
     @classmethod
     def load_freshness_model(cls):
         if cls.model_freshness is None:
-            model_path = os.path.join(settings.BASE_DIR, 'ml-models', 'fish-freshness.h5')
-            if not os.path.exists(model_path):
-                raise FileNotFoundError(f"Freshness model not found at {model_path}")
+            model_path = hf_hub_download(
+                repo_id="saru03/Fishnet-Freshness",
+                filename="fish-freshness.h5",
+                cache_dir=os.path.join(settings.BASE_DIR, ".hf-cache")
+            )
             cls.model_freshness = tf.keras.models.load_model(model_path)
 
     @classmethod
     def load_disease_model(cls):
         if cls.model_disease is None:
-            model_path = os.path.join(settings.BASE_DIR, 'ml-models', 'disease-detection.h5')
-            if not os.path.exists(model_path):
-                raise FileNotFoundError(f"Disease model not found at {model_path}")
+            model_path = hf_hub_download(
+                repo_id="saru03/Fishnet-Disease",
+                filename="disease-detection.h5",
+                cache_dir=os.path.join(settings.BASE_DIR, ".hf-cache")
+            )
             cls.model_disease = tf.keras.models.load_model(model_path)
 
 

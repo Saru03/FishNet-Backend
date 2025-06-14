@@ -12,7 +12,10 @@ from django.conf import settings
 from dateutil import parser
 import cartopy
 import earthaccess
+from huggingface_hub import hf_hub_download
+import os
 
+CACHE_DIR = os.path.join(settings.BASE_DIR, ".hf-cache")
 # Authenticate earthaccess
 auth = earthaccess.login(persist=True)
 print("Earthaccess login successful.")
@@ -20,7 +23,11 @@ print("Earthaccess login successful.")
 # Load models and other files
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_model.json')
 SCALER_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_scaler.pkl')
-RF_IMPUTER_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'rf_imputer_model.pkl')
+RF_IMPUTER_PATH = hf_hub_download(
+    repo_id="saru03/Fishnet-Imputer",
+    filename="rf_imputer_model.pkl",
+    cache_dir=CACHE_DIR
+)
 FEATURES_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_features.txt')
 
 # Load model
