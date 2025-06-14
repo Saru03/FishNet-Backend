@@ -17,7 +17,7 @@ import os
 
 CACHE_DIR = os.path.join(settings.BASE_DIR, ".hf-cache")
 # Authenticate earthaccess
-auth = earthaccess.login(persist=True)
+auth = earthaccess.login(strategy="environment")
 print("Earthaccess login successful.")
 
 # Load models and other files
