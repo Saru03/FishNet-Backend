@@ -1,3 +1,5 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,7 +10,6 @@ import geopy.geocoders
 import pandas as pd
 import numpy as np
 import pickle
-import os
 from sklearn.preprocessing import RobustScaler
 from django.conf import settings
 from .mappings import fish_mapping, region, market_mapping, market_locations

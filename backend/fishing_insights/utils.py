@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -13,7 +14,7 @@ from dateutil import parser
 import cartopy
 import earthaccess
 from huggingface_hub import hf_hub_download
-import os
+
 
 print("DEBUG:: ENV USERNAME:", os.environ.get("EARTHDATA_USERNAME"))
 print("DEBUG:: ENV PASSWORD:", os.environ.get("EARTHDATA_PASSWORD"))

@@ -1,3 +1,5 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,13 +8,10 @@ from rest_framework.parsers import MultiPartParser, FormParser
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
 from PIL import Image  # type: ignore
-import os
 from django.conf import settings
 import traceback
 from io import BytesIO
-from huggingface_hub import hf_hub_download
-import tensorflow as tf
-import os
+from huggingface_hub import hf_hub_download  # type: ignore
 
 class ModelLoader:
     model_freshness = None

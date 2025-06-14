@@ -1,10 +1,11 @@
 # myapp/utils.py
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from sklearn.preprocessing import RobustScaler
 import pickle
-import os
 import traceback
 from django.conf import settings # Import settings
 import matplotlib.pyplot as plt
