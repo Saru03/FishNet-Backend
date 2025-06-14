@@ -15,6 +15,9 @@ import earthaccess
 from huggingface_hub import hf_hub_download
 import os
 
+print("DEBUG:: ENV USERNAME:", os.environ.get("EARTHDATA_USERNAME"))
+print("DEBUG:: ENV PASSWORD:", os.environ.get("EARTHDATA_PASSWORD"))
+
 CACHE_DIR = os.path.join(settings.BASE_DIR, ".hf-cache")
 # Authenticate earthaccess
 auth = earthaccess.login(strategy="environment")
