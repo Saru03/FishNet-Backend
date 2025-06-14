@@ -1,0 +1,11 @@
+*.h5
+*.keras
+*.pkl
+*.joblib
+*.sav
+*.model
+*.onnx
+backend/ml-models/
+my_django_environment/
+backend/.env/
+.env
