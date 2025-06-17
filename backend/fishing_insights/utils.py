@@ -20,29 +20,28 @@ print("DEBUG:: ENV USERNAME:", os.environ.get("EARTHDATA_USERNAME"))
 print("DEBUG:: ENV PASSWORD:", os.environ.get("EARTHDATA_PASSWORD"))
 
 CACHE_DIR = os.path.join(settings.BASE_DIR, ".hf-cache")
-# Authenticate earthaccess
 auth = earthaccess.login(strategy="environment")
 print("Earthaccess login successful.")
 
-# Load models and other files
-MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_model.json')
-SCALER_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_scaler.pkl')
-RF_IMPUTER_PATH = hf_hub_download(
-    repo_id="saru03/Fishnet-Imputer",
-    filename="rf_imputer_model.pkl",
-    cache_dir=CACHE_DIR
-)
+# # Load models and other files
+# MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_model.json')
+# SCALER_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_scaler.pkl')
+# RF_IMPUTER_PATH = hf_hub_download(
+#     repo_id="saru03/Fishnet-Imputer",
+#     filename="rf_imputer_model.pkl",
+#     cache_dir=CACHE_DIR
+# )
 FEATURES_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_features.txt')
 
-# Load model
-model = xgb.XGBClassifier()
-model.load_model(MODEL_PATH)
-print("Model loaded.")
+# # Load model
+# model = xgb.XGBClassifier()
+# model.load_model(MODEL_PATH)
+# print("Model loaded.")
 
-# Load scaler and imputer
-scaler = joblib.load(SCALER_PATH)
-rf_imputer = joblib.load(RF_IMPUTER_PATH)
-print("Scaler and imputer loaded.")
+# # Load scaler and imputer
+# scaler = joblib.load(SCALER_PATH)
+# rf_imputer = joblib.load(RF_IMPUTER_PATH)
+# print("Scaler and imputer loaded.")
 
 # Load feature names
 with open(FEATURES_PATH, 'r') as f:
@@ -96,7 +95,7 @@ print("CPUE dictionary initialized.")
 
 class ProcessedData:
     @classmethod
-    def fetch_data(cls, date_str, latitude, longitude):
+    def fetch_data(cls, date_str, latitude, longitude, model, scaler, rf_imputer):
         print(f"Fetching data for date: {date_str}, lat: {latitude}, lon: {longitude}")
         try:
             lat = float(latitude)
@@ -183,7 +182,7 @@ class ProcessedData:
             "fishing_effort_hours": effort_hours,
         }
         print("Data to predict:", data)
-        result = cls._predict(data)
+        result = cls._predict(data,model,scaler)
         print("Prediction result:", result)
         return result
 
@@ -404,7 +403,7 @@ class ProcessedData:
         return 0, []
   
     @staticmethod
-    def _predict(data):
+    def _predict(data,model,scaler):
         print("Starting prediction with data:", data)
         print("Starting prediction with data:", data)
         df = pd.DataFrame([data])

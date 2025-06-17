@@ -13,11 +13,13 @@ import requests
 import os 
 
 API_KEY = os.environ.get('MAPS_API_KEY')
+from .ml_loader import get_ml_components
 
 class PFZView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
+        # Existing parameter extraction and validation...
         date_str = request.data.get('date')
         latitude_str = request.data.get('latitude')
         longitude_str = request.data.get('longitude')
@@ -36,13 +38,20 @@ class PFZView(APIView):
         except ValueError:
             return Response({"error": "Invalid latitude or longitude. Must be numeric."}, status=400)
 
-        result = ProcessedData.fetch_data(date_str, latitude, longitude)
+        # Lazy load ML components
+        model, scaler, rf_imputer = get_ml_components()
+
+        # Pass these models or your data to your fetch_data or prediction logic
+        result = ProcessedData.fetch_data(
+            date_str, latitude, longitude, 
+            model=model, scaler=scaler, rf_imputer=rf_imputer
+        )
 
         if "error" in result:
             return Response(result, status=400)
         else:
             return Response(result, status=200)
-
+        
 class MapsView(APIView):
     def get(self, request):
         location = request.GET.get('location', '')
