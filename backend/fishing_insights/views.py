@@ -19,7 +19,6 @@ class PFZView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        # Existing parameter extraction and validation...
         date_str = request.data.get('date')
         latitude_str = request.data.get('latitude')
         longitude_str = request.data.get('longitude')
@@ -41,7 +40,6 @@ class PFZView(APIView):
         # Lazy load ML components
         model, scaler, rf_imputer = get_ml_components()
 
-        # Pass these models or your data to your fetch_data or prediction logic
         result = ProcessedData.fetch_data(
             date_str, latitude, longitude, 
             model=model, scaler=scaler, rf_imputer=rf_imputer
@@ -84,7 +82,7 @@ class WeatherView(APIView):
             response = requests.get(url)
             data = response.json()
 
-            # Extract all needed info
+            
             current = data.get('current', {})
             forecast_day = data.get('forecast', {}).get('forecastday', [{}])[0]
 

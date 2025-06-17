@@ -21,8 +21,6 @@ class OrderItemSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         request = self.context.get('request', None)
         if request and getattr(request, 'user', None):
-            # Optional: filter FishStock queryset based on user
-            # But since we're using fish_name, no need for queryset here
             pass
 
     def validate(self, data):
@@ -35,7 +33,6 @@ class OrderItemSerializer(serializers.ModelSerializer):
         if not fish_name:
             raise serializers.ValidationError("Fish name is required.")
 
-        # Lookup the FishStock by name (case-insensitive)
         try:
             fish = FishStock.objects.get(name__iexact=fish_name.strip(),user=request.user)
             print(f"Found fish: {fish.name}") 
@@ -43,16 +40,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
             print("Fish not found") 
             raise serializers.ValidationError(f"Fish '{fish_name}' not found.")
 
-        # Check stock availability
         if request:
             if quantity > fish.quantity:
                 raise serializers.ValidationError(f"Not enough stock for {fish.name}. Available: {fish.quantity}")
 
-            # Optional: check if fish belongs to user's scope if applicable
-            # if hasattr(fish, 'user') and fish.user != user:
-            #     raise serializers.ValidationError("Fish does not belong to current user.")
-
-        # Attach the fish object to data for use in create/update
         data['fish'] = fish
         return data
 
@@ -69,11 +60,10 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        item_details = validated_data.pop('item_details')  # extract order items
+        item_details = validated_data.pop('item_details') 
         request = self.context['request']
         user = request.user
 
-        # Create the order
         order = Order.objects.create(user=user, **validated_data)
 
         for item in item_details:
@@ -111,15 +101,12 @@ class OrderSerializer(serializers.ModelSerializer):
             item.fish.quantity += item.quantity
             item.fish.save()
 
-        # Delete existing items
         instance.items.all().delete()
 
-        # Update order fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Add new items if provided
         if item_details:
             for item in item_details:
                 fish = item.get('fish')
@@ -142,7 +129,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
                 print(f"OrderItem created: {fish.name}, Qty: {quantity}")
 
-        return instance  # ✅ Return only once, after handling updates
+        return instance  
 
 class SaleItemSerializer(serializers.ModelSerializer):
     fish = FishStockSerializer(read_only=True)
@@ -172,11 +159,11 @@ class SaleItemSerializer(serializers.ModelSerializer):
             print(f"Found fish: {fish.name} (ID: {fish.id})")
         except FishStock.DoesNotExist:
             print(f"Fish '{fish_name}' not found")
-            # Only create if it's a manual sale, not for order conversion
+            
             if source == 'order':
                 raise serializers.ValidationError(f"Fish '{fish_name}' not found in stock.")
             
-            # For manual sales, create if not exists
+          
             print(f"Creating new fish: {fish_name}")
             fish = FishStock.objects.create(
                 name=fish_name.strip(),
@@ -186,11 +173,9 @@ class SaleItemSerializer(serializers.ModelSerializer):
                 user=request.user if request else None
             )
 
-        # Assign the fish object for further validation
         data['fish'] = fish
         print(f"Fish object assigned to data: {fish.name}")
 
-        # Check stock availability for manual sales only 
         if request and source == 'manual':
             if quantity > fish.quantity:
                 raise serializers.ValidationError(f"Not enough stock for {fish.name}. Available: {fish.quantity}")
@@ -227,22 +212,18 @@ class SalesSerializer(serializers.ModelSerializer):
         order = validated_data.get('order', None)
         print(f"Order from validated_data: {order}")
 
-        # Remove fields that might cause issues with Sales model creation
         customer_name = validated_data.pop('customer_name', None)
         validated_data.pop('user', None)
 
-        # Create the sale instance without customer_name first
         print(f"Creating sale with data: {validated_data}")
         sale = Sales.objects.create(**validated_data, user=user)
         print(f"✓ Sale created with ID: {sale.id}, Order: {sale.order}")
 
-        # Handle customer_name separately after creation
-        # Check if Sales model has a direct customer_name field or if it's a property
+        
         if customer_name:
             try:
-                # Try direct assignment first
                 if hasattr(Sales, '_meta'):
-                    # Check if customer_name is a model field
+                    
                     field_names = [field.name for field in Sales._meta.get_fields()]
                     if 'customer_name' in field_names:
                         sale.customer_name = customer_name
@@ -250,18 +231,18 @@ class SalesSerializer(serializers.ModelSerializer):
                         print(f"✓ Customer name set directly: {sale.customer_name}")
                     else:
                         print(f"⚠ customer_name is not a direct field, might be a property derived from order")
-                        # If customer_name is derived from order, it should be automatically available
+                       
                         if order and hasattr(order, 'customer_name'):
                             print(f"✓ Customer name available from order: {order.customer_name}")
             except Exception as e:
                 print(f"⚠ Could not set customer_name directly: {e}")
-                # customer_name might be a derived property from the order
+                
 
-        # Process each item manually
+        
         for i, item_data in enumerate(item_details_data):
             print(f"Processing item {i+1}: {item_data}")
             
-            # Ensure proper data types
+            
             try:
                 fish_name = str(item_data.get('fish_name', '')).strip()
                 quantity = int(item_data.get('quantity', 0))
@@ -284,7 +265,7 @@ class SalesSerializer(serializers.ModelSerializer):
             
             print(f"✓ Item data validated - Fish: {fish_name}, Quantity: {quantity}, Price: {price_per_unit}")
             
-            # Look up the fish object
+            
             try:
                 fish = FishStock.objects.get(name__iexact=fish_name,user=request.user)
                 print(f"✓ Found fish: {fish.name} (ID: {fish.id})")
@@ -293,7 +274,7 @@ class SalesSerializer(serializers.ModelSerializer):
                 if source == 'order':
                     raise serializers.ValidationError(f"Fish '{fish_name}' not found in stock.")
                 
-                # For manual sales, create if not exists
+                
                 fish = FishStock.objects.create(
                     name=fish_name,
                     category='Unknown',
@@ -303,8 +284,7 @@ class SalesSerializer(serializers.ModelSerializer):
                 )
                 print(f"✓ Created new fish: {fish.name}")
             
-            # IMPORTANT: For order conversions, DO NOT reduce stock again
-            # Stock was already reduced when the order was created
+            
             if source == 'manual':
                 # Only reduce stock for manual sales
                 if quantity > fish.quantity:
@@ -315,7 +295,7 @@ class SalesSerializer(serializers.ModelSerializer):
             else:
                 print(f"✓ Skipping stock reduction for order conversion - stock already reduced")
 
-            # Create sale item
+            
             try:
                 sale_item = SaleItem.objects.create(
                     sale=sale,
@@ -325,7 +305,7 @@ class SalesSerializer(serializers.ModelSerializer):
                 )
                 print(f"✓ SaleItem created successfully with ID: {sale_item.id}")
                 
-                # Double-check the item was created and linked properly
+                
                 if SaleItem.objects.filter(id=sale_item.id, sale=sale).exists():
                     print(f"✓ SaleItem {sale_item.id} confirmed linked to sale {sale.id}")
                 else:
@@ -337,16 +317,16 @@ class SalesSerializer(serializers.ModelSerializer):
                 traceback.print_exc()
                 raise
 
-        # Final verification
+       
         sale.refresh_from_db()
         items_count = sale.items.count()
         print(f"✓ Final sale verification - Sale ID: {sale.id}, Items: {items_count}, Order: {sale.order}")
         
-        # Verify the order-sale relationship
+        
         if sale.order:
             print(f"✓ Sale {sale.id} is properly linked to Order {sale.order.id}")
             
-            # Check if this sale shows up in converted orders query
+            
             converted_orders = Sales.objects.filter(
                 source='order', 
                 order__isnull=False
@@ -363,7 +343,7 @@ class SalesSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
 
-        # Restore old stock
+        
         if instance.source == 'manual':
             for old_item in instance.items.all():
                 old_item.fish.quantity += old_item.quantity
@@ -375,7 +355,7 @@ class SalesSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        # Handle customer_name separately if it's not a direct field
+        
         if customer_name:
             try:
                 field_names = [field.name for field in Sales._meta.get_fields()]
@@ -390,7 +370,7 @@ class SalesSerializer(serializers.ModelSerializer):
             quantity = item_data.get('quantity')
             price_per_unit = item_data.get('price_per_unit')
             
-            # Look up fish
+            
             try:
                 fish = FishStock.objects.get(name__iexact=fish_name.strip(),user=request.user)
             except FishStock.DoesNotExist:

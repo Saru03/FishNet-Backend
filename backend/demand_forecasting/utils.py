@@ -1,4 +1,3 @@
-# myapp/utils.py
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import pandas as pd
@@ -7,10 +6,10 @@ from datetime import datetime, timedelta
 from sklearn.preprocessing import RobustScaler
 import pickle
 import traceback
-from django.conf import settings # Import settings
+from django.conf import settings
 import matplotlib.pyplot as plt
 
-EXCEL_FILE_PATH = os.path.join(settings.BASE_DIR, 'demand_forecasting', 'all_states_aggregate.xlsx') # Use settings.BASE_DIR
+EXCEL_FILE_PATH = os.path.join(settings.BASE_DIR, 'demand_forecasting', 'all_states_aggregate.xlsx') 
 MODEL_FILE_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'forecast.pkl') 
 
 def get_fish_column(fish, size, market):
@@ -90,47 +89,46 @@ class ForecastModelLoader:
     @classmethod
     def load_model_and_data(cls):
         if cls.model is None or cls.scaler is None or cls.train_data is None:
-            print("Loading forecasting model, scaler, and data...") # Add a print statement to see when loading happens
+            print("Loading forecasting model, scaler, and data...")
             # Load data first
             cls.train_data = load_and_prepare_data()
             if cls.train_data is None:
                 print("Failed to load training data.")
-                return False # Indicate failure to load data
+                return False 
 
-            # Initialize and fit scaler
             try:
                 cls.scaler = RobustScaler()
-                cls.scaler.fit(cls.train_data)  # Fit the scaler on the entire training data
+                cls.scaler.fit(cls.train_data)  #
                 print("Scaler fitted successfully.")
             except Exception as e:
                 print(f"Error fitting scaler: {e}")
                 traceback.print_exc()
                 cls.scaler = None
-                cls.train_data = None # Reset data if scaler fails
+                cls.train_data = None 
                 return False
 
-            # Load the model using pickle
+            
             try:
                 with open(MODEL_FILE_PATH, 'rb') as file:
                     cls.model = pickle.load(file)
                 print("Forecasting model loaded successfully.")
-                return True # Indicate success
+                return True 
             except FileNotFoundError:
                 print(f"Error: Model file not found at {MODEL_FILE_PATH}")
                 cls.model = None
-                cls.scaler = None # Reset scaler if model fails
-                cls.train_data = None # Reset data if model fails
-                return False # Indicate failure
+                cls.scaler = None 
+                cls.train_data = None 
+                return False 
             except Exception as e:
                 print(f"Error loading model: {e}")
                 traceback.print_exc()
                 cls.model = None
-                cls.scaler = None # Reset scaler if model fails
-                cls.train_data = None # Reset data if model fails
+                cls.scaler = None 
+                cls.train_data = None 
                 return False
         else:
             print("Forecasting model, scaler, and data already loaded (cached).")
-            return True # Indicate that they were already loaded
+            return True 
             
     @staticmethod
     def plot_fish_price_forecast(train_data, forecast_dates, fish_and_size, fish_data):
@@ -160,7 +158,7 @@ class ForecastModelLoader:
             return {"error": "Model, scaler, or data failed to load. Please check your setup and server logs."}
 
         try:
-            fore_date = datetime.strptime(fore_date_str, "%Y-%m-%d")  # Assuming input format is YYYY-MM-DD
+            fore_date = datetime.strptime(fore_date_str, "%Y-%m-%d")  
         except ValueError:
             return {"error": "Invalid date format. Please use YYYY-MM-DD."}
 
@@ -171,7 +169,6 @@ class ForecastModelLoader:
 
         steps = (fore_date - baseline_date).days
 
-        # Scale the last 90 days of the training data
         train_scaled = pd.DataFrame(cls.scaler.transform(cls.train_data),
                                     columns=cls.train_data.columns,
                                     index=cls.train_data.index)
@@ -186,7 +183,7 @@ class ForecastModelLoader:
             input_data = new_input.reshape(1, 90, -1)
 
         forecast = cls.scaler.inverse_transform(forecast_scaled)
-        baseline_date_forecast = baseline_date + timedelta(days=1)  # Start forecast from the day after baseline
+        baseline_date_forecast = baseline_date + timedelta(days=1)  
         forecast_dates = [baseline_date_forecast + timedelta(days=i) for i in range(steps)]
 
         # Get the column name for the specific fish, size, and market
@@ -194,13 +191,11 @@ class ForecastModelLoader:
         if fish_and_size == "Incorrect Input":
             return {"error": "Incorrect fish, size, or market."}
 
-        # Plot forecast
         try:
             cls.plot_fish_price_forecast(cls.train_data, forecast_dates, fish_and_size, forecast)
         except Exception as e:
             print(f"Error during plotting: {e}")
 
-        # Prepare forecast data for JSON response
         forecast_data = pd.DataFrame(forecast, columns=cls.train_data.columns, index=forecast_dates)
 
         if fish_and_size not in forecast_data.columns:

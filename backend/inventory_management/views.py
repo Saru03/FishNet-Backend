@@ -82,10 +82,10 @@ class OrderListView(generics.ListCreateAPIView):
             if old_status != 'completed' and new_status == 'completed':
                 print(f"Converting order {order_id} to sale...")
                 
-                # Auto-move to sales
+
                 try:
                     with transaction.atomic():
-                        # Get order items BEFORE any deletion
+                        
                         order_items = list(instance.items.select_related('fish').all())
                         print(f"Found {len(order_items)} items in order {order_id}")
                         
@@ -94,7 +94,7 @@ class OrderListView(generics.ListCreateAPIView):
                                 'error': 'No items found in order'
                             }, status=status.HTTP_400_BAD_REQUEST)
                         
-                        # Prepare item_details for sale
+                        
                         item_details = []
                         for item in order_items:
                             if not item.fish:
@@ -114,7 +114,7 @@ class OrderListView(generics.ListCreateAPIView):
                                 'error': 'No valid items found in order'
                             }, status=status.HTTP_400_BAD_REQUEST)
                         
-                        # Create sale data with proper formatting
+                        
                         sale_data = {
                             'sale_date': datetime.now().isoformat(),
                             'source': 'order',
@@ -125,7 +125,7 @@ class OrderListView(generics.ListCreateAPIView):
                         
                         print(f"Sale data prepared: {sale_data}")
                         
-                        # Create sale using serializer with proper context
+                        
                         context = {'request': request, 'source': 'order'}
                         sales_serializer = SalesSerializer(data=sale_data, context=context)
                         
@@ -133,11 +133,11 @@ class OrderListView(generics.ListCreateAPIView):
                             sale = sales_serializer.save()
                             print(f"✓ Order {instance.id} successfully converted to sale {sale.id}")
                             
-                            # Verify the sale was created properly
+                            
                             created_sale = Sales.objects.get(id=sale.id)
                             print(f"✓ Sale verification - ID: {created_sale.id}, Order: {created_sale.order_id}, Items: {created_sale.items.count()}")
                             
-                            # Return success response with updated order
+                            
                             serializer = self.get_serializer(instance)
                             return Response({
                                 'message': 'Order completed and converted to sale successfully',
@@ -147,7 +147,7 @@ class OrderListView(generics.ListCreateAPIView):
                             
                         else:
                             print(f"✗ Failed to create sale: {sales_serializer.errors}")
-                            # Rollback order status change
+                            
                             instance.status = old_status
                             instance.save()
                             return Response({
@@ -159,15 +159,13 @@ class OrderListView(generics.ListCreateAPIView):
                     print(f"✗ Error auto-moving order to sales: {e}")
                     import traceback
                     traceback.print_exc()
-                    # Rollback order status change
                     instance.status = old_status
                     instance.save()
                     return Response({
                         'error': 'Failed to convert order to sale',
                         'details': str(e)
                     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-            # For non-completed status changes, just return the updated order
+        
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
                 
