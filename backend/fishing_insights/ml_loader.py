@@ -1,38 +1,60 @@
-# ml_loader.py
 import os
 import joblib
 import xgboost as xgb
-from earthaccess import login as earthaccess_login
 from huggingface_hub import hf_hub_download
 from django.conf import settings
+from earthaccess import login as earthaccess_login
+import time
+import threading
+import gc
+
+# Globals
+_model = None
+_scaler = None
+_rf_imputer = None
+_last_used = None
+_idle_timeout = 600  # seconds (10 minutes)
 
 CACHE_DIR = os.path.join(settings.BASE_DIR, ".hf-cache")
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_model.json')
 SCALER_PATH = os.path.join(settings.BASE_DIR, 'ml-models', 'pfz_scaler.pkl')
 
-# Initialize globals
-_model = None
-_scaler = None
-_rf_imputer = None
+
+def unload_if_idle():
+    global _model, _scaler, _rf_imputer, _last_used
+    while True:
+        time.sleep(60)  # check every 1 minute
+        if _last_used is not None:
+            elapsed = time.time() - _last_used
+            if elapsed > _idle_timeout:
+                print("DEBUG: Unloading ML models due to inactivity...")
+                _model = None
+                _scaler = None
+                _rf_imputer = None
+                gc.collect()
+                _last_used = None
+
+
+# Start the background thread once
+threading.Thread(target=unload_if_idle, daemon=True).start()
+
 
 def get_ml_components():
-    global _model, _scaler, _rf_imputer
+    global _model, _scaler, _rf_imputer, _last_used
+
+    _last_used = time.time()
 
     if _model is None:
-        # Optional: log into Earthdata (if needed)
         print("DEBUG: Logging into Earthdata via environment...")
         auth = earthaccess_login(strategy="environment")
         print("Earthaccess login successful.")
 
-        # Load model
         print("DEBUG: Loading ML components...")
         _model = xgb.XGBClassifier()
         _model.load_model(MODEL_PATH)
 
-        # Load scaler
         _scaler = joblib.load(SCALER_PATH)
 
-        # Load imputer from HF Hub
         rf_imputer_path = hf_hub_download(
             repo_id="saru03/Fishnet-Imputer",
             filename="rf_imputer_model.pkl",
